@@ -11,13 +11,6 @@ import Analytics from './pages/Analytics'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 
-const ComingSoon = ({ title }) => (
-  <div>
-    <h1 className="text-2xl font-bold text-slate-800">{title}</h1>
-    <p className="text-slate-500 mt-2">This screen is being built.</p>
-  </div>
-)
-
 export default function App() {
   return (
     <Routes>
@@ -32,12 +25,19 @@ export default function App() {
         }
       >
         <Route index element={<Dashboard />} />
+        <Route path="expeditions" element={<Expeditions />} />
         <Route path="vessels" element={<Vessels />} />
         <Route path="equipment" element={<Equipment />} />
         <Route path="stations" element={<Stations />} />
-        <Route path="expeditions" element={<Expeditions />} />
         <Route path="map" element={<MapView />} />
-        <Route path="analytics" element={<ProtectedRoute roles={['admin', 'scientist']}><Analytics /></ProtectedRoute>} />
+        <Route
+          path="analytics"
+          element={
+            <ProtectedRoute roles={['admin', 'scientist']}>
+              <Analytics />
+            </ProtectedRoute>
+          }
+        />
       </Route>
     </Routes>
   )

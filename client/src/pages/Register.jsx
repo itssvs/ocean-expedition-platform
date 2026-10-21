@@ -1,53 +1,59 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import AuthShell from '../components/AuthShell'
+import { Button, ErrorNote, Field, inputCls } from '../components/ui'
 
 export default function Register() {
   const { register } = useAuth()
   const navigate = useNavigate()
   const [form, setForm] = useState({ name: '', email: '', password: '', role: 'crew', specialization: '' })
   const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
 
-  const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
+  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+    setBusy(true)
     try {
       const payload = { ...form }
       if (payload.role !== 'scientist') delete payload.specialization
       await register(payload)
       navigate('/')
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed')
+      setError(err.response?.data?.message || 'Could not reach the server. Check that it is running.')
+    } finally {
+      setBusy(false)
     }
   }
 
-  const input = 'border w-full p-2 mb-3 rounded'
-
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-xl shadow w-96">
-        <h1 className="text-2xl font-bold mb-6 text-slate-800">Create Account</h1>
-        {error && <p className="text-red-600 mb-3">{error}</p>}
-        <input className={input} name="name" placeholder="Full name" value={form.name} onChange={onChange} required />
-        <input className={input} name="email" type="email" placeholder="Email" value={form.email} onChange={onChange} required />
-        <input className={input} name="password" type="password" placeholder="Password" value={form.password} onChange={onChange} required />
-        <select className={input} name="role" value={form.role} onChange={onChange}>
-          <option value="admin">Admin</option>
-          <option value="scientist">Scientist</option>
-          <option value="captain">Captain</option>
-          <option value="crew">Crew</option>
-        </select>
+    <AuthShell title="Create your account" subtitle="Choose the role that matches your work on board.">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <ErrorNote>{error}</ErrorNote>
+        <Field label="Full name"><input className={inputCls} value={form.name} onChange={set('name')} required /></Field>
+        <Field label="Email"><input className={inputCls} type="email" value={form.email} onChange={set('email')} required /></Field>
+        <Field label="Password"><input className={inputCls} type="password" value={form.password} onChange={set('password')} required /></Field>
+        <Field label="Role">
+          <select className={inputCls} value={form.role} onChange={set('role')}>
+            <option value="admin">Admin</option>
+            <option value="scientist">Scientist</option>
+            <option value="captain">Captain</option>
+            <option value="crew">Crew</option>
+          </select>
+        </Field>
         {form.role === 'scientist' && (
-          <input className={input} name="specialization" placeholder="Specialization (e.g. Physical Oceanography)"
-            value={form.specialization} onChange={onChange} />
+          <Field label="Specialization">
+            <input className={inputCls} value={form.specialization} onChange={set('specialization')} placeholder="Physical oceanography" />
+          </Field>
         )}
-        <button className="bg-sky-700 text-white w-full p-2 rounded">Register</button>
-        <p className="mt-4 text-sm">
-          Have an account? <Link className="text-sky-700" to="/login">Login</Link>
-        </p>
+        <Button type="submit" className="w-full" disabled={busy}>{busy ? 'Creating account...' : 'Create account'}</Button>
       </form>
-    </div>
+      <p className="mt-6 text-sm text-mist">
+        Already registered? <Link className="font-medium text-glow hover:underline" to="/login">Log in</Link>
+      </p>
+    </AuthShell>
   )
 }

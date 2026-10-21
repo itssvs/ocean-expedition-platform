@@ -1,14 +1,15 @@
-import { useEffect, useState } from 'react'
 import {
   PieChart, Pie, Cell, Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer,
 } from 'recharts'
-import api from '../services/api'
+import { ErrorNote, PageHeader, Panel, STATUS, useList } from '../components/ui'
 
-const STATUS_COLORS = {
-  docked: '#0ea5e9', 'at-sea': '#10b981', maintenance: '#f59e0b',
-  available: '#10b981', 'in-use': '#0ea5e9',
-  planned: '#94a3b8', ongoing: '#10b981', completed: '#0ea5e9', cancelled: '#ef4444',
+const AXIS = '#8ba5b3'
+const GRID = '#24465c'
+const tooltipStyle = {
+  contentStyle: { background: '#12293a', border: '1px solid #24465c', borderRadius: 8, color: '#e8f3f6' },
+  itemStyle: { color: '#e8f3f6' },
+  cursor: { fill: 'rgba(63,224,207,0.08)' },
 }
 
 const countBy = (items, key) => {
@@ -16,26 +17,28 @@ const countBy = (items, key) => {
   items.forEach((i) => { counts[i[key]] = (counts[i[key]] || 0) + 1 })
   return Object.entries(counts).map(([name, value]) => ({ name, value }))
 }
+const colorOf = (name) => STATUS[name]?.hex || '#8ba5b3'
 
-function Card({ title, children }) {
+function ChartBox({ title, empty, children }) {
   return (
-    <div className="bg-white rounded-xl shadow p-4">
-      <h2 className="font-semibold text-slate-700 mb-2">{title}</h2>
-      <div style={{ height: 260 }}>{children}</div>
-    </div>
+    <Panel title={title}>
+      <div className="h-72 p-4">
+        {empty ? <p className="pt-24 text-center text-sm text-mist">No data yet</p> : children}
+      </div>
+    </Panel>
   )
 }
 
-function StatusBar({ data }) {
+function StatusBars({ data }) {
   return (
     <ResponsiveContainer width="100%" height="100%">
       <BarChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="name" />
-        <YAxis allowDecimals={false} />
-        <Tooltip />
-        <Bar dataKey="value" name="Count">
-          {data.map((d) => <Cell key={d.name} fill={STATUS_COLORS[d.name] || '#64748b'} />)}
+        <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
+        <XAxis dataKey="name" stroke={AXIS} tickLine={false} />
+        <YAxis allowDecimals={false} stroke={AXIS} tickLine={false} axisLine={false} />
+        <Tooltip {...tooltipStyle} />
+        <Bar dataKey="value" name="Count" radius={[6, 6, 0, 0]}>
+          {data.map((d) => <Cell key={d.name} fill={colorOf(d.name)} />)}
         </Bar>
       </BarChart>
     </ResponsiveContainer>
@@ -43,85 +46,73 @@ function StatusBar({ data }) {
 }
 
 export default function Analytics() {
-  const [vessels, setVessels] = useState([])
-  const [equipment, setEquipment] = useState([])
-  const [stations, setStations] = useState([])
-  const [expeditions, setExpeditions] = useState([])
-  const [error, setError] = useState('')
+  const vessels = useList('/vessels')
+  const equipment = useList('/equipment')
+  const stations = useList('/stations')
+  const expeditions = useList('/expeditions')
+  const error = vessels.error || equipment.error || stations.error || expeditions.error
 
-  useEffect(() => {
-    Promise.all([api.get('/vessels'), api.get('/equipment'), api.get('/stations'), api.get('/expeditions')])
-      .then(([v, q, s, e]) => {
-        setVessels(v.data); setEquipment(q.data); setStations(s.data); setExpeditions(e.data)
-      })
-      .catch((err) => setError(err.response?.data?.message || 'Failed to load analytics'))
-  }, [])
-
-  const vesselData = countBy(vessels, 'status')
-  const equipmentData = countBy(equipment, 'status')
-  const expeditionData = countBy(expeditions, 'status')
-  const depthData = stations.filter((s) => s.depth != null).map((s) => ({ name: s.name, depth: s.depth }))
-  const inUse = equipment.filter((e) => e.status === 'in-use').length
-  const utilisation = equipment.length ? Math.round((inUse / equipment.length) * 100) : 0
+  const vesselData = countBy(vessels.items, 'status')
+  const equipmentData = countBy(equipment.items, 'status')
+  const expeditionData = countBy(expeditions.items, 'status')
+  const depthData = stations.items.filter((s) => s.depth != null).map((s) => ({ name: s.name, depth: s.depth }))
+  const inUse = equipment.items.filter((e) => e.status === 'in-use').length
+  const utilisation = equipment.items.length ? Math.round((inUse / equipment.items.length) * 100) : 0
 
   const stats = [
-    ['Vessels', vessels.length],
-    ['Equipment', equipment.length],
-    ['Stations', stations.length],
-    ['Expeditions', expeditions.length],
+    ['Vessels', vessels.items.length],
+    ['Equipment', equipment.items.length],
+    ['Stations', stations.items.length],
+    ['Expeditions', expeditions.items.length],
     ['Equipment in use', `${utilisation}%`],
   ]
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-slate-800 mb-4">Analytics</h1>
-      {error && <p className="text-red-600 mb-3">{error}</p>}
+      <PageHeader title="Analytics" subtitle="How the fleet, instruments and expeditions are doing." />
+      <ErrorNote>{error}</ErrorNote>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+      <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-5">
         {stats.map(([label, value]) => (
-          <div key={label} className="bg-white rounded-xl shadow p-4">
-            <p className="text-sm text-slate-500">{label}</p>
-            <p className="text-3xl font-bold text-slate-800">{value}</p>
+          <div key={label} className="rounded-2xl border border-line bg-trench p-4">
+            <p className="text-sm text-mist">{label}</p>
+            <p className="mt-1 font-display text-3xl font-semibold tabular-nums text-foam">{value}</p>
           </div>
         ))}
       </div>
 
-      <div className="grid md:grid-cols-2 gap-4">
-        <Card title="Vessels by status">
-          {vesselData.length === 0 ? <p className="text-slate-400">No data</p> : (
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={vesselData} dataKey="value" nameKey="name" outerRadius={90} label>
-                  {vesselData.map((d) => <Cell key={d.name} fill={STATUS_COLORS[d.name] || '#64748b'} />)}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          )}
-        </Card>
+      <div className="grid gap-6 md:grid-cols-2">
+        <ChartBox title="Vessels by status" empty={vesselData.length === 0}>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie data={vesselData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={90} paddingAngle={3} stroke="none">
+                {vesselData.map((d) => <Cell key={d.name} fill={colorOf(d.name)} />)}
+              </Pie>
+              <Tooltip {...tooltipStyle} />
+              <Legend formatter={(v) => <span style={{ color: '#e8f3f6' }}>{v}</span>} />
+            </PieChart>
+          </ResponsiveContainer>
+        </ChartBox>
 
-        <Card title="Equipment by status">
-          {equipmentData.length === 0 ? <p className="text-slate-400">No data</p> : <StatusBar data={equipmentData} />}
-        </Card>
+        <ChartBox title="Equipment by status" empty={equipmentData.length === 0}>
+          <StatusBars data={equipmentData} />
+        </ChartBox>
 
-        <Card title="Expeditions by status">
-          {expeditionData.length === 0 ? <p className="text-slate-400">No data</p> : <StatusBar data={expeditionData} />}
-        </Card>
+        <ChartBox title="Expeditions by status" empty={expeditionData.length === 0}>
+          <StatusBars data={expeditionData} />
+        </ChartBox>
 
-        <Card title="Station depth (m)">
-          {depthData.length === 0 ? <p className="text-slate-400">No data</p> : (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={depthData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="depth" name="Depth (m)" fill="#0369a1" />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </Card>
+        <ChartBox title="Station depth (m)" empty={depthData.length === 0}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={depthData}>
+              <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="name" stroke={AXIS} tickLine={false} tick={{ fontSize: 11 }} />
+              <YAxis stroke={AXIS} tickLine={false} axisLine={false} />
+              <Tooltip {...tooltipStyle} />
+              <Bar dataKey="depth" name="Depth (m)" fill="#3fe0cf" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartBox>
       </div>
     </div>
   )
