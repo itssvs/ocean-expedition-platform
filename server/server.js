@@ -7,6 +7,7 @@ const vesselRoutes = require('./routes/vesselRoutes');
 const equipmentRoutes = require('./routes/equipmentRoutes');
 const stationRoutes = require('./routes/stationRoutes');
 const expeditionRoutes = require('./routes/expeditionRoutes');
+const userRoutes = require('./routes/userRoutes');
 
 connectDB();
 const app = express();
@@ -21,6 +22,7 @@ app.use('/api/equipment', equipmentRoutes);
 
 app.use('/api/stations', stationRoutes);
 app.use('/api/expeditions', expeditionRoutes);
+app.use('/api/users', userRoutes);
 
 app.get('/', (req, res) => res.send('API running'));
 
