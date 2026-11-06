@@ -21,6 +21,7 @@ export default function Stations() {
         { label: 'Name', render: (s) => <span className="font-medium text-foam">{s.name}</span> },
         { label: 'Coordinates', render: (s) => `${s.coordinates?.lat}, ${s.coordinates?.lng}` },
         { label: 'Depth', render: (s) => (s.depth != null ? `${s.depth} m` : '-') },
+        { label: 'Description', render: (s) => <span className="text-mist">{s.description || '-'}</span> },
         {
           label: 'Parameters',
           render: (s) => (

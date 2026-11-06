@@ -66,7 +66,8 @@ export default function MapView() {
               <Popup>
                 <b>{s.name}</b><br />
                 Depth: {s.depth ?? '-'} m<br />
-                Measures: {(s.parameters || []).join(', ') || '-'}
+                Measures: {(s.parameters || []).join(', ') || '-'}<br />
+{s.description && <i>{s.description}</i>}
               </Popup>
             </CircleMarker>
           ))}
